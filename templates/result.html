@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Detection Results</title>   
+</head>
+<body>
+  <h2>Malicious Attack Detection</h2>
+  <div class="stats-box">
+    <div class="box">
+      <strong>Total Records</strong>
+      {{ total }}
+    </div>
+    <div class="box">
+      <strong>Malicious Records</strong>
+      {{ malicious }}
+    </div>
+    <div class="box">
+      <strong>Benign Records</strong>
+      {{ benign }}
+    </div>
+  </div>
+
+  <h3>Attack Information</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Record</th>
+        <th>Is Anomaly</th>
+        <th>Attack Type</th>
+        <th>Duration</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in attacks %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{% if row.Prediction == 'Normal' %}✅{% else %}❌{% endif %}</td>
+        <td>{{ row.Prediction }}</td>
+        <td>{{ "%.1f" | format(row.duration) }} s</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h3>Next Predicted Behavior: {{ next_label }}</h3>
+
+  <div class="download-link">
+    <a href="/download">Download</a>
+  </div>
+
+  <div class="toggle-button" onclick="toggleBehavior()">Show Behavior Prediction</div>
+
+  <div id="behavior-section" style="display:none;">
+    <div class="info-box">
+      <p>Next Predicted Behavior: <span class="highlight">{{ next_label }}</span></p>
+    </div>
+  </div>
+
+  <script>
+    function toggleBehavior() {
+      var section = document.getElementById("behavior-section");
+      var button = document.querySelector(".toggle-button");
+      if (section.style.display === "none") {
+        section.style.display = "block";
+        button.innerHTML = "Hide Behavior Prediction";
+      } else {
+        section.style.display = "none";
+        button.innerHTML = "Show Behavior Prediction";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Model</title>
+</head>
+<body>
+    <h2>Upload a New Model</h2>
+    <form action="/upload_model" method="POST" enctype="multipart/form-data">
+        <label for="model_name">Model Name:</label>
+        <input type="text" id="model_name" name="model_name" required><br><br>
+
+        <label for="model_file">Model File (.pkl):</label>
+        <input type="file" id="model_file" name="model_file" accept=".pkl" required><br><br>
+
+        <input type="submit" value="Upload">
+    </form>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Available Datasets</title>
+</head>
+<body>
+    <h2>Dataset List</h2>
+    <table border="1">
+        <tr>
+            <th>Name</th>
+            <th>Upload Time</th>
+        </tr>
+        {% for dataset in datasets %}
+        <tr>
+            <td>{{ dataset.name }}</td>
+            <td>{{ dataset.uploaded_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Detect Attacks</title>
+</head>
+<body>
+
+<h2>Upload Dataset</h2>
+<form action="{{ url_for('predict_dataset') }}" method="post" enctype="multipart/form-data">
+    <input type="file" name="dataset" required>
+    <input type="submit" value="Upload and Analyze">
+</form>
+
+{% if result %}
+<h2>Prediction Results</h2>
+<table border="1">
+  <tr><th>Record</th><th>Is Anomaly</th><th>Attack Type</th></tr>
+  {% for row in result %}
+    <tr>
+      <td>{{ row.record }}</td>
+      <td>{{ row.is_anomaly }}</td>
+      <td>{{ row.attack_type }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% if pie_data %}
+<canvas id="pieChart" width="200" height="200"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  const pieData = {{ pie_data | tojson }};
+
+  const labels = pieData.map(p => p.label);
+  const counts = pieData.map(p => p.count);
+  const detailsMap = {};
+  pieData.forEach(p => {
+    if (p.label === "Malicious") {
+      detailsMap["Malicious"] = p.details;
+    }
+  });
+
+  const pieChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: counts,
+        backgroundColor: ['#8ecae6', '#ff6b6b']
+      }]
+    },
+    options: {
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label;
+              const value = context.raw;
+
+              if (label === "Malicious" && detailsMap["Malicious"]) {
+                let details = detailsMap["Malicious"];
+                let total = details.reduce((sum, d) => sum + d.count, 0);
+                let detailLines = details.map(d =>
+                  `${d.type}: ${d.count} (${(d.count / total * 100).toFixed(1)}%)`
+                );
+                return [`${label}: ${value}`].concat(detailLines);
+              }
+              return `${label}: ${value}`;
+            }
+          }
+        }
+      }
+    }
+  });
+</script>
+{% endif %}
+
+</body>
+</html>
