@@ -4,162 +4,60 @@ import joblib
 import mysql.connector
 import numpy as np
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from sklearn.metrics import accuracy_score
+from sqlalchemy import text, func
+from models import db, User, Result
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/authentication'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploaded_models'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# MySQL config
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="malware_db"
-    )
+db.init_app(app)
 
-# Upload new model
-@app.route("/upload_model", methods=["GET", "POST"])
-def upload_model():
-    if request.method == "POST":
-        model_name = request.form["model_name"]
-        model_file = request.files["model_file"]
+# ========== Admin Dashboard ==========
+@app.route("/admin")
+def admin_dashboard():
+    with app.app_context():
+        # Total users
+        total_users = User.query.count()
 
-        if not model_file:
-            return "No file selected"
+        # Active users = users who have at least 1 prediction result
+        active_users = db.session.query(Result.user_id).distinct().count()
 
-        filename = os.path.join(app.config['UPLOAD_FOLDER'], model_file.filename)
-        model_file.save(filename)
+        # New users in last 7 days
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        new_users = User.query.filter(User.created_at >= seven_days_ago).count()
 
-        # Load the model and evaluate accuracy
-        model = joblib.load(filename)
-        X_test = np.load("X_test.npy")
-        y_test = np.load("y_test.npy")
-        y_pred = model.predict(X_test)
-        accuracy = round(float(accuracy_score(y_test, y_pred) * 100), 2)
+        # Total test runs
+        test_runs = Result.query.count()
 
-        # Insert into MySQL
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO models (name, accuracy, status, uploaded_at)
-            VALUES (%s, %s, %s, %s)
-        """, (model_name, accuracy, "Inactive", datetime.now()))
-        conn.commit()
-        cursor.close()
-        conn.close()
+        # Malware detected (if Prediction column in saved CSV includes malicious label)
+        malware_keywords = ["Backdoor", "DoS", "Shellcode", "Worm", "Reconnaissance"]
+        malware_detected = db.session.query(Result).filter(
+            db.or_(*[Result.predictions.like(f"%{k}%") for k in malware_keywords])
+        ).count()
 
-        return redirect(url_for("model_list"))
+        # Top 5 malware types from the last 50 results
+        recent_results = db.session.query(Result.predictions).order_by(Result.timestamp.desc()).limit(50).all()
+        malware_counter = {}
 
-    return render_template("upload_model.html")
+        for row in recent_results:
+            for mtype in malware_keywords:
+                if mtype in row[0]:
+                    malware_counter[mtype] = malware_counter.get(mtype, 0) + 1
 
-# Model list display
-@app.route("/models")
-def model_list():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM models ORDER BY uploaded_at DESC")
-    models = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template("model_list.html", models=models)
+        top_malware_list = sorted(malware_counter.items(), key=lambda x: x[1], reverse=True)[:5]
 
-# Actions
-@app.route("/activate/<int:model_id>")
-def activate_model(model_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE models SET status='Inactive'")
-    cursor.execute("UPDATE models SET status='Active' WHERE id=%s", (model_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return redirect(url_for("model_list"))
-
-@app.route("/deactivate/<int:model_id>")
-def deactivate_model(model_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE models SET status='Inactive' WHERE id=%s", (model_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return redirect(url_for("model_list"))
-
-@app.route("/delete/<int:model_id>")
-def delete_model(model_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM models WHERE id=%s", (model_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return redirect(url_for("model_list"))
-
-# List datasets
-@app.route("/datasets")
-def list_datasets():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM datasets ORDER BY uploaded_at DESC")
-    datasets = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template("datasets.html", datasets=datasets)
-
-@app.route("/predict_dataset", methods=["POST"])
-def predict_dataset():
-    file = request.files["dataset"]
-    df = pd.read_csv(file)
-
-    model = joblib.load("models/rf_model.pkl")
-    pca = joblib.load("models/pca.pkl")
-    scaler = joblib.load("models/scaler.pkl")
-    label_encoder = joblib.load("models/label_encoder.pkl")
-
-  
-    df = df.drop(columns=["attack_type", "protocol", "service", "state"], errors="ignore")
-    scaled = scaler.transform(df)
-    X_pca = pca.transform(scaled)
-    y_pred = model.predict(X_pca)
-    predicted_labels = label_encoder.inverse_transform(y_pred)
-
-  
-    result = []
-    for i, label in enumerate(predicted_labels):
-        is_anomaly = "Yes" if label != "Normal" else "No"
-        result.append({
-            "record": i + 1,
-            "is_anomaly": is_anomaly,
-            "attack_type": label
-        })
-
-    total_normal = sum(1 for r in result if r["is_anomaly"] == "No")
-    total_malicious = len(result) - total_normal
-
-    malicious_types = {}
-    for r in result:
-        if r["is_anomaly"] == "Yes":
-            malicious_types[r["attack_type"]] = malicious_types.get(r["attack_type"], 0) + 1
-
-    pie_data = [
-        {"label": "Normal", "count": total_normal},
-        {
-            "label": "Malicious",
-            "count": total_malicious,
-            "details": [{"type": k, "count": v} for k, v in malicious_types.items()]
-        }
-    ]
-
-    return render_template("detect.html", result=result, pie_data=pie_data)
-@app.route("/detect", methods=["GET"])
-def detect():
-
-    return render_template("detect.html")
-
-
+        return render_template("admin.html",
+                               total_users=total_users,
+                               active_users=active_users,
+                               new_users=new_users,
+                               test_runs=test_runs,
+                               malware_detected=malware_detected,
+                               top_malware=top_malware_list)
 
 if __name__ == "__main__":
     app.run(debug=True)

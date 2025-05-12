@@ -60,10 +60,9 @@
     <h4 class="p-3">Dashboard</h4>
     <div class="list-group list-group-flush">
       <a href="/" class="list-group-item list-group-item-action bg-dark text-white">Home</a>
-      <a href="#" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
-      <a href="#" class="list-group-item list-group-item-action bg-dark text-white">Messages</a>
-      <a href="#" class="list-group-item list-group-item-action bg-dark text-white">Settings</a>
-      <a href="/logout" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
+      <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
+      <a href="/profile" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
+      <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
     </div>
   </div>
   <div class="content">
@@ -134,6 +133,9 @@
         {% endfor %}
       </ul>
       {% endif %}
+      <h5 class="mt-3">🕒 Estimated Time Until Next Attack</h5>
+      <p class="text-muted">{{ survival_time }}</p>
+      
       <canvas id="nextAttackChart" width="400px" height="300px"></canvas>
 
       <div class="mt-3">

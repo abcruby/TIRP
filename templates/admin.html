@@ -1,0 +1,112 @@
+""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📊 Admin Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #f5f7fa;
+    }
+    .dashboard-box {
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      color: white;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .dashboard-title {
+      font-size: 1.2rem;
+      margin-bottom: 0.3rem;
+    }
+    .dashboard-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+<div class="container my-5">
+  <h2 class="mb-4">📊 Admin Dashboard</h2>
+
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="dashboard-box bg-primary text-center">
+        <div class="dashboard-title">Total Users</div>
+        <div class="dashboard-value">{{ total_users }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="dashboard-box bg-success text-center">
+        <div class="dashboard-title">Active Users</div>
+        <div class="dashboard-value">{{ active_users }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="dashboard-box bg-warning text-dark text-center">
+        <div class="dashboard-title">New Users (7 days)</div>
+        <div class="dashboard-value">{{ new_users }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="dashboard-box bg-secondary text-center">
+        <div class="dashboard-title">Tests Run</div>
+        <div class="dashboard-value">{{ test_runs }}</div>
+      </div>
+    </div>
+    <div class="col-md-3 mt-3">
+      <div class="dashboard-box bg-danger text-center">
+        <div class="dashboard-title">Malware Detected</div>
+        <div class="dashboard-value">{{ malware_detected }}</div>
+      </div>
+    </div>
+  </div>
+
+  <h4 class="mt-4">Top 5 Most Detected Malware Types</h4>
+  <canvas id="malwareChart" width="600" height="300"></canvas>
+
+  <script>
+    const labels = {{ top_malware | map(attribute=0) | list | tojson }};
+    const data = {{ top_malware | map(attribute=1) | list | tojson }};
+
+    new Chart(document.getElementById('malwareChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Detections',
+          data: data,
+          backgroundColor: 'rgba(255, 99, 132, 0.6)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Count'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Malware Type'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  </script>
+</div>
+</body>
+</html>""
