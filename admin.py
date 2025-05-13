@@ -101,6 +101,29 @@ def delete_model(model_id):
     conn.close()
     return redirect(url_for("model_list"))
 
+# Upload data
+@app.route("/upload_dataset", methods=["POST"])
+def upload_dataset():
+    file = request.files["dataset"]
+    if file:
+        filename = file.filename
+        filepath = os.path.join("uploaded_datasets", filename)
+        os.makedirs("uploaded_datasets", exist_ok=True)
+        file.save(filepath)
+
+        # Save to database if applicable
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO datasets (name, uploaded_at)
+            VALUES (%s, NOW())
+        """, (filename,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for("list_datasets"))
+
 # List datasets
 @app.route("/datasets")
 def list_datasets():

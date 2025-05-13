@@ -4,6 +4,12 @@
     <title>Available Datasets</title>
 </head>
 <body>
+    <h2>Upload New Dataset</h2>
+    <form action="{{ url_for('upload_dataset') }}" method="post" enctype="multipart/form-data">
+        <input type="file" name="dataset" required>
+        <input type="submit" value="Upload">
+    </form>
+
     <h2>Dataset List</h2>
     <table border="1">
         <tr>
