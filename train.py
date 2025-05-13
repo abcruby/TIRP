@@ -1,4 +1,3 @@
-# cccccc
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -46,7 +45,7 @@ print(classification_report(y_test, y_pred))
 normal_index = label_encoder.transform(["Normal"])[0] if "Normal" in label_encoder.classes_ else 0
 binary_labels = np.where(y == normal_index, 0, 1)
 
-# Build sequences of length 5 to predict 6th
+# Prediction: Build sequences of length 5 to predict 6th
 seq_len = 5
 sequences = []
 next_flags = []
@@ -55,19 +54,23 @@ for i in range(len(binary_labels) - seq_len):
     sequences.append(binary_labels[i:i+seq_len])
     next_flags.append(binary_labels[i + seq_len])
 
+# Convert to NumPy arrays
 X_seq = np.array(sequences)
 y_seq = np.array(next_flags)
 
+# Train-test split for sequential prediction model
 X_seq_train, X_seq_test, y_seq_train, y_seq_test = train_test_split(X_seq, y_seq, test_size=0.2, random_state=42)
 
+# Train a separate Random Forest model to predict next behavior
 rf_seq = RandomForestClassifier(n_estimators=100, random_state=42)
 rf_seq.fit(X_seq_train, y_seq_train)
 
+# Save trained models
 import os
 os.makedirs("models", exist_ok=True)
 
-joblib.dump(rf, "models/rf_model.pkl")
-joblib.dump(pca, "models/pca.pkl")
-joblib.dump(scaler, "models/scaler.pkl")
-joblib.dump(label_encoder, "models/label_encoder.pkl")
-joblib.dump(rf_seq, "models/rf_seq_model_binary.pkl")
+joblib.dump(rf, "models/rf_model.pkl") # Main multi-class classifier
+joblib.dump(pca, "models/pca.pkl") # PCA transformer
+joblib.dump(scaler, "models/scaler.pkl") # Scaler for feature normalization
+joblib.dump(label_encoder, "models/label_encoder.pkl") # Encoder to decode label predictions
+joblib.dump(rf_seq, "models/rf_seq_model_binary.pkl") # Sequence-based behavior predictor

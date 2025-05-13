@@ -4,6 +4,7 @@ import numpy as np
 import os
 import joblib
 
+# Initialize Flask app
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -19,6 +20,7 @@ seq_model = joblib.load("models/rf_seq_model_binary.pkl")
 latest_result = None
 latest_next_label = None
 
+# Main route for uploading and predicting a CSV file
 @app.route("/", methods=["GET", "POST"])
 def index():
     global latest_result, latest_next_label
@@ -28,10 +30,11 @@ def index():
         if not file:
             return "No file uploaded"
 
+        # Load and clean data
         df = pd.read_csv(file)
         df = df.drop(columns=['protocol', 'service', 'state', 'attack_type'], errors='ignore')
 
-        # Scale + PCA
+        # Preprocess input (scale + PCA)
         X_scaled = scaler.transform(df)
         X_pca = pca.transform(X_scaled)
 
@@ -55,13 +58,14 @@ def index():
             latest_next_label = "Malicious" if next_binary == 1 else "Normal"
         else:
             latest_next_label = "N/A (Too few records)"
-
+        # Save result and redirect to results page
         df.to_csv("predicted_results.csv", index=False)
         latest_result = df
         return redirect(url_for("results"))
 
     return render_template("index.html")
 
+# Display prediction results summary and table
 @app.route("/results")
 def results():
     global latest_result, latest_next_label
@@ -83,9 +87,11 @@ def results():
     else:
         return redirect(url_for("index"))
 
+# Download results
 @app.route("/download")
 def download():
     return send_file("predicted_results.csv", as_attachment=True)
 
+# Start the Flask development server
 if __name__ == "__main__":
     app.run(debug=True)

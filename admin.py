@@ -7,11 +7,12 @@ import pandas as pd
 from datetime import datetime
 from sklearn.metrics import accuracy_score
 
+# Initialize Flask app and configure upload folder
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploaded_models'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# MySQL config
+# Connect to MySQL
 def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
@@ -66,7 +67,7 @@ def model_list():
     conn.close()
     return render_template("model_list.html", models=models)
 
-# Actions
+# Activate a model
 @app.route("/activate/<int:model_id>")
 def activate_model(model_id):
     conn = get_db_connection()
@@ -78,6 +79,7 @@ def activate_model(model_id):
     conn.close()
     return redirect(url_for("model_list"))
 
+# Deactivate a model
 @app.route("/deactivate/<int:model_id>")
 def deactivate_model(model_id):
     conn = get_db_connection()
@@ -88,6 +90,7 @@ def deactivate_model(model_id):
     conn.close()
     return redirect(url_for("model_list"))
 
+# Delete a model
 @app.route("/delete/<int:model_id>")
 def delete_model(model_id):
     conn = get_db_connection()
@@ -109,6 +112,7 @@ def list_datasets():
     conn.close()
     return render_template("datasets.html", datasets=datasets)
 
+# Detect attack types, and return results
 @app.route("/predict_dataset", methods=["POST"])
 def predict_dataset():
     file = request.files["dataset"]
@@ -119,14 +123,16 @@ def predict_dataset():
     scaler = joblib.load("models/scaler.pkl")
     label_encoder = joblib.load("models/label_encoder.pkl")
 
-  
+    # Drop non-numeric or unnecessary columns
     df = df.drop(columns=["attack_type", "protocol", "service", "state"], errors="ignore")
+    # Apply preprocessing: scaling + PCA
     scaled = scaler.transform(df)
     X_pca = pca.transform(scaled)
+    # Predict labels
     y_pred = model.predict(X_pca)
     predicted_labels = label_encoder.inverse_transform(y_pred)
 
-  
+    # Format results with anomaly indicator
     result = []
     for i, label in enumerate(predicted_labels):
         is_anomaly = "Yes" if label != "Normal" else "No"
@@ -136,9 +142,11 @@ def predict_dataset():
             "attack_type": label
         })
 
+    # Count for pie chart visualization
     total_normal = sum(1 for r in result if r["is_anomaly"] == "No")
     total_malicious = len(result) - total_normal
 
+    # Breakdown of malicious types
     malicious_types = {}
     for r in result:
         if r["is_anomaly"] == "Yes":
@@ -154,12 +162,13 @@ def predict_dataset():
     ]
 
     return render_template("detect.html", result=result, pie_data=pie_data)
+
+# Display empty detection page
 @app.route("/detect", methods=["GET"])
 def detect():
 
     return render_template("detect.html")
 
-
-
+# Start the Flask development server
 if __name__ == "__main__":
     app.run(debug=True)
