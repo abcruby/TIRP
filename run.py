@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from models import db, User, Result
 from datetime import datetime
+from admin import admin_bp
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -19,6 +20,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 with app.app_context():
     db.create_all()
+
+app.register_blueprint(admin_bp)
+
 
 # Load models
 rf_model = joblib.load("models/rf_model.pkl")
@@ -58,7 +62,11 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
-            return redirect(next_page)
+            if user.usertype == 'admin':
+                return redirect(url_for('admin.admin_dashboard'))
+            else:
+                return redirect(next_page)
+            
         else:
             flash('Invalid credentials.')
             return redirect(url_for('login'))
