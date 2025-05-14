@@ -23,7 +23,6 @@ with app.app_context():
 
 app.register_blueprint(admin_bp)
 
-
 # Load models
 rf_model = joblib.load("models/rf_model.pkl")
 pca = joblib.load("models/pca.pkl")
@@ -66,7 +65,6 @@ def login():
                 return redirect(url_for('admin.admin_dashboard'))
             else:
                 return redirect(next_page)
-            
         else:
             flash('Invalid credentials.')
             return redirect(url_for('login'))
@@ -81,9 +79,9 @@ def logout():
 @app.route("/", methods=["GET", "POST"])
 def index():
     global latest_result, latest_next_label, latest_label_probs
-
     if 'user_id' not in session:
         return redirect(url_for('login', next=request.path))
+    user = User.query.get(session['user_id'])
 
     if request.method == "POST":
         file = request.files["file"]
@@ -91,18 +89,15 @@ def index():
             return "No file uploaded"
 
         df = pd.read_csv(file)
-        df = df.drop(columns=['protocol', 'service', 'state', 'attack_type'], errors='ignore')
+        df = df.drop(columns=['protocol', 'service', 'state', 'attack_type', 'Prediction'], errors='ignore')
 
         X_scaled = scaler.transform(df)
         X_pca = pca.transform(X_scaled)
         y_pred = rf_model.predict(X_pca)
         labels = label_encoder.inverse_transform(y_pred)
         df["Prediction"] = labels
-
         if "duration" not in df.columns:
             df["duration"] = np.random.uniform(0.1, 10.0, size=len(df)).round(1)
-
-        # Forecast next attack type using last 5 labels
         if len(y_pred) >= 5:
             seq_input = y_pred[-5:].reshape(1, -1)
             next_probs = seq_model.predict_proba(seq_input)[0]
@@ -117,7 +112,6 @@ def index():
         df.to_csv("predicted_results.csv", index=False)
         latest_result = df
 
-        # Save to DB
         result_record = Result(
             filename=file.filename,
             predictions=df.to_csv(index=False),
@@ -131,11 +125,12 @@ def index():
 
         return redirect(url_for("results"))
 
-    return render_template("index.html")
+    return render_template("index.html", user=user)
 
 @app.route("/results")
 def results():
     global latest_result, latest_next_label, latest_label_probs
+    user = User.query.get(session['user_id'])
 
     if latest_result is not None:
         df = latest_result.copy()
@@ -144,14 +139,16 @@ def results():
         benign = (df["Prediction"] == "Normal").sum()
 
         return render_template("result.html",
-                               total=total,
-                               malicious=malicious,
-                               benign=benign,
-                               attacks=df.to_dict(orient='records'),
-                               next_label=latest_next_label,
-                               label_probs=latest_label_probs)
+                            total=total,
+                            malicious=malicious,
+                            benign=benign,
+                            attacks=df.to_dict(orient='records'),
+                            next_label=latest_next_label,
+                            label_probs=latest_label_probs,
+                            user=user)
     else:
         return redirect(url_for("index"))
+
 
 @app.route("/download")
 def download():

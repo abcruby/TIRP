@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 from models import db, User, Result
+from sqlalchemy import or_
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -12,9 +13,10 @@ def admin_dashboard():
     new_users = User.query.filter(User.created_at >= datetime.utcnow() - timedelta(days=7)).count()
     test_runs = Result.query.count()
 
+    # Detect malware based on keywords in saved predictions
     malware_keywords = ["Backdoor", "DoS", "Shellcode", "Worm", "Reconnaissance"]
     malware_detected = db.session.query(Result).filter(
-        db.or_(*[Result.predictions.like(f"%{k}%") for k in malware_keywords])
+        or_(*[Result.predictions.like(f"%{k}%") for k in malware_keywords])
     ).count()
 
     recent_results = db.session.query(Result.predictions).order_by(Result.timestamp.desc()).limit(50).all()
@@ -46,6 +48,13 @@ def manage_users():
 
     users = User.query.all()
     return render_template("admin_users.html", users=users)
+@admin_bp.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    return render_template('admin_profile.html', user=user)
 
 @admin_bp.route("/users/add", methods=["GET", "POST"])
 def add_user():

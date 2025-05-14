@@ -56,14 +56,30 @@
   </style>
 </head>
 <body>
-  <div class="sidebar bg-dark text-white">
-    <h4 class="p-3">Dashboard</h4>
+   <!-- Sidebar -->
+   {% if user.usertype == 'admin' %}
+   <div class="sidebar bg-dark text-white">
+    <h4 class="p-3">MalDetect Admin</h4>
     <div class="list-group list-group-flush">
-      <a href="/" class="list-group-item list-group-item-action bg-dark text-white">Home</a>
+      <a href="/admin" class="list-group-item list-group-item-action bg-dark text-white">Dashboard</a>
+      <a href="/" class="list-group-item list-group-item-action bg-dark text-white">Detect</a>
       <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
+      <a href="{{ url_for('admin.manage_users') }}" class="list-group-item list-group-item-action bg-dark text-white">User Management</a>
       <a href="/profile" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
       <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
     </div>
+  </div>
+   {% else %}
+   <div class="sidebar bg-dark text-white">
+     <h4 class="p-3">MalDetect</h4>
+     <div class="list-group list-group-flush">
+       <a href="#" class="list-group-item list-group-item-action bg-dark text-white">Home</a>
+       <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
+       <a href="/profile" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
+       <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
+     </div>
+   </div>
+     {% endif %}
   </div>
   <div class="content">
     <div class="container">
@@ -114,7 +130,13 @@
               <td>{{ loop.index }}</td>
               <td>{% if row.Prediction == 'Normal' %}✅{% else %}❌{% endif %}</td>
               <td>{{ row.Prediction }}</td>
-              <td>{{ "%.1f" | format(row.duration) }} s</td>
+              <td>
+                {% if 'duration' in row %}
+                  {{ "%.1f" | format(row.duration) }} s
+                {% else %}
+                  N/A
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>

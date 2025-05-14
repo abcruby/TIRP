@@ -39,8 +39,21 @@
 
 <body>
   <!-- Sidebar -->
+  {% if user.usertype == 'admin' %}
   <div class="sidebar bg-dark text-white">
-    <h4 class="p-3">Dashboard</h4>
+    <h4 class="p-3">MalDetect Admin</h4>
+    <div class="list-group list-group-flush">
+      <a href="/admin" class="list-group-item list-group-item-action bg-dark text-white">Dashboard</a>
+      <a href="/" class="list-group-item list-group-item-action bg-dark text-white">Detect</a>
+      <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
+      <a href="{{ url_for('admin.manage_users') }}" class="list-group-item list-group-item-action bg-dark text-white">User Management</a>
+      <a href="/profile" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
+      <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="sidebar bg-dark text-white">
+    <h4 class="p-3">MalDetect</h4>
     <div class="list-group list-group-flush">
       <a href="#" class="list-group-item list-group-item-action bg-dark text-white">Home</a>
       <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
@@ -48,6 +61,7 @@
       <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
     </div>
   </div>
+    {% endif %}
 
   <!-- Main Content -->
 <div class="content">
