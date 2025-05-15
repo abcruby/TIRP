@@ -1,165 +1,106 @@
-from flask import Flask, render_template, request, redirect, url_for
-import os
-import joblib
-import mysql.connector
-import numpy as np
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash
+from datetime import datetime, timedelta
+from models import db, User, Result
+from sqlalchemy import or_
 import pandas as pd
-from datetime import datetime
-from sklearn.metrics import accuracy_score
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploaded_models'
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+@admin_bp.route("/")
+def admin_dashboard():
+    total_users = User.query.count()
+    active_users = db.session.query(Result.user_id).distinct().count()
+    new_users = User.query.filter(User.created_at >= datetime.utcnow() - timedelta(days=7)).count()
+    test_runs = Result.query.count()
 
-# MySQL config
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="malware_db"
-    )
+    # Malware keyword detection
+    malware_keywords = ["Backdoor", "DoS", "Shellcode", "Worm", "Reconnaissance"]
+    malware_detected = db.session.query(Result).filter(
+        or_(*[Result.predictions.like(f"%{k}%") for k in malware_keywords])
+    ).count()
 
-# Upload new model
-@app.route("/upload_model", methods=["GET", "POST"])
-def upload_model():
+    # Analyze recent results for top malware
+    recent_results = db.session.query(Result.predictions).order_by(Result.timestamp.desc()).limit(50).all()
+    malware_counter = {}
+    for row in recent_results:
+        for mtype in malware_keywords:
+            if mtype in row[0]:
+                malware_counter[mtype] = malware_counter.get(mtype, 0) + 1
+
+    top_malware_list = sorted(malware_counter.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    # Load feature importance for the chart
+    feature_names = []
+    importances = []
+    try:
+        feature_df = pd.read_csv("static/charts/feature_importance.csv").head(10)
+        feature_names = feature_df["Feature"].tolist()
+        importances = feature_df["Importance"].tolist()
+    except Exception as e:
+        print(f"⚠️ Could not load feature importance data: {e}")
+
+    return render_template("admin.html",
+                           total_users=total_users,
+                           active_users=active_users,
+                           new_users=new_users,
+                           test_runs=test_runs,
+                           malware_detected=malware_detected,
+                           top_malware=top_malware_list,
+                           feature_names=feature_names,
+                           importances=importances)
+
+@admin_bp.route("/users")
+def manage_users():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    current_user = User.query.get(session["user_id"])
+    if current_user.usertype != "admin":
+        flash("Unauthorized access.")
+        return redirect(url_for("index"))
+
+    users = User.query.all()
+    return render_template("admin_users.html", users=users)
+@admin_bp.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    return render_template('admin_profile.html', user=user)
+
+@admin_bp.route("/users/add", methods=["GET", "POST"])
+def add_user():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    current_user = User.query.get(session["user_id"])
+    if current_user.usertype != "admin":
+        flash("Unauthorized access.")
+        return redirect(url_for("index"))
+
     if request.method == "POST":
-        model_name = request.form["model_name"]
-        model_file = request.files["model_file"]
+        username = request.form["username"]
+        password = request.form["password"]
+        firstname = request.form["firstname"]
+        lastname = request.form["lastname"]
+        usertype = request.form.get("usertype", "user")
 
-        if not model_file:
-            return "No file selected"
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists.")
+            return redirect(url_for("admin.add_user"))
 
-        filename = os.path.join(app.config['UPLOAD_FOLDER'], model_file.filename)
-        model_file.save(filename)
+        hashed_pw = generate_password_hash(password)
+        new_user = User(
+            username=username,
+            password=hashed_pw,
+            firstname=firstname,
+            lastname=lastname,
+            usertype=usertype
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        flash("User added successfully.")
+        return redirect(url_for("admin.manage_users"))
 
-        # Load the model and evaluate accuracy
-        model = joblib.load(filename)
-        X_test = np.load("X_test.npy")
-        y_test = np.load("y_test.npy")
-        y_pred = model.predict(X_test)
-        accuracy = round(float(accuracy_score(y_test, y_pred) * 100), 2)
-
-        # Insert into MySQL
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO models (name, accuracy, status, uploaded_at)
-            VALUES (%s, %s, %s, %s)
-        """, (model_name, accuracy, "Inactive", datetime.now()))
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        return redirect(url_for("model_list"))
-
-    return render_template("upload_model.html")
-
-# Model list display
-@app.route("/models")
-def model_list():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM models ORDER BY uploaded_at DESC")
-    models = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template("model_list.html", models=models)
-
-# Actions
-@app.route("/activate/<int:model_id>")
-def activate_model(model_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE models SET status='Inactive'")
-    cursor.execute("UPDATE models SET status='Active' WHERE id=%s", (model_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return redirect(url_for("model_list"))
-
-@app.route("/deactivate/<int:model_id>")
-def deactivate_model(model_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE models SET status='Inactive' WHERE id=%s", (model_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return redirect(url_for("model_list"))
-
-@app.route("/delete/<int:model_id>")
-def delete_model(model_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM models WHERE id=%s", (model_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return redirect(url_for("model_list"))
-
-# List datasets
-@app.route("/datasets")
-def list_datasets():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM datasets ORDER BY uploaded_at DESC")
-    datasets = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template("datasets.html", datasets=datasets)
-
-@app.route("/predict_dataset", methods=["POST"])
-def predict_dataset():
-    file = request.files["dataset"]
-    df = pd.read_csv(file)
-
-    model = joblib.load("models/rf_model.pkl")
-    pca = joblib.load("models/pca.pkl")
-    scaler = joblib.load("models/scaler.pkl")
-    label_encoder = joblib.load("models/label_encoder.pkl")
-
-  
-    df = df.drop(columns=["attack_type", "protocol", "service", "state"], errors="ignore")
-    scaled = scaler.transform(df)
-    X_pca = pca.transform(scaled)
-    y_pred = model.predict(X_pca)
-    predicted_labels = label_encoder.inverse_transform(y_pred)
-
-  
-    result = []
-    for i, label in enumerate(predicted_labels):
-        is_anomaly = "Yes" if label != "Normal" else "No"
-        result.append({
-            "record": i + 1,
-            "is_anomaly": is_anomaly,
-            "attack_type": label
-        })
-
-    total_normal = sum(1 for r in result if r["is_anomaly"] == "No")
-    total_malicious = len(result) - total_normal
-
-    malicious_types = {}
-    for r in result:
-        if r["is_anomaly"] == "Yes":
-            malicious_types[r["attack_type"]] = malicious_types.get(r["attack_type"], 0) + 1
-
-    pie_data = [
-        {"label": "Normal", "count": total_normal},
-        {
-            "label": "Malicious",
-            "count": total_malicious,
-            "details": [{"type": k, "count": v} for k, v in malicious_types.items()]
-        }
-    ]
-
-    return render_template("detect.html", result=result, pie_data=pie_data)
-@app.route("/detect", methods=["GET"])
-def detect():
-
-    return render_template("detect.html")
-
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+    return render_template("admin_add_user.html")
