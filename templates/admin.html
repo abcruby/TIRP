@@ -87,4 +87,35 @@
  
 </div>
 </body>
-</html>""
+</html><div class="mt-5">
+  <h5>🎯 Top Feature Importance (Random Forest)</h5>
+  <canvas id="featureImportanceChart" width="400" height="200"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('featureImportanceChart').getContext('2d');
+  const featureChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ feature_names | tojson }},
+      datasets: [{
+        label: 'Feature Importance',
+        data: {{ importances | tojson }},
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+</script>
+

@@ -1,0 +1,5 @@
+duration
+src_bytes
+dst_bytes
+src_port
+dst_port
