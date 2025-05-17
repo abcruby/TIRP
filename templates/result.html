@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>Detection Results</title>   
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+   <!-- Bootstrap 5 CSS -->
+   <link
+   href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+   rel="stylesheet"
+ >
+
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -57,33 +63,35 @@
 </head>
 <body>
    <!-- Sidebar -->
-   {% if user.usertype == 'admin' %}
-   <div class="sidebar bg-dark text-white">
+  <!-- Sidebar -->
+  {% if user.usertype == 'admin' %}
+  <div class="sidebar bg-dark text-white">
     <h4 class="p-3">MalDetect Admin</h4>
     <div class="list-group list-group-flush">
       <a href="/admin" class="list-group-item list-group-item-action bg-dark text-white">Dashboard</a>
       <a href="/" class="list-group-item list-group-item-action bg-dark text-white">Detect</a>
+      <a href="{{ url_for('admin.upload_dataset') }}" class="list-group-item list-group-item-action bg-dark text-white">Train Data model</a>
       <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
       <a href="{{ url_for('admin.manage_users') }}" class="list-group-item list-group-item-action bg-dark text-white">User Management</a>
       <a href="/profile" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
       <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
     </div>
   </div>
-   {% else %}
-   <div class="sidebar bg-dark text-white">
-     <h4 class="p-3">MalDetect</h4>
-     <div class="list-group list-group-flush">
-       <a href="#" class="list-group-item list-group-item-action bg-dark text-white">Home</a>
-       <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
-       <a href="/profile" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
-       <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
-     </div>
-   </div>
-     {% endif %}
+  {% else %}
+  <div class="sidebar bg-dark text-white">
+    <h4 class="p-3">MalDetect</h4>
+    <div class="list-group list-group-flush">
+      <a href="/" class="list-group-item list-group-item-action bg-dark text-white">Home</a>
+      <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
+      <a href="/profile" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
+      <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
+    </div>
+  </div>
+    {% endif %}
   </div>
   <div class="content">
     <div class="container">
-      <h2 class="mb-4">🔍 Malicious Attack Detection Dashboard</h2>
+      <h2 class="mb-4">Malicious Attack Detection Dashboard</h2>
 
       <div class="stats-box">
         <div class="box">
@@ -102,16 +110,16 @@
 
       <div class="d-flex justify-content-between">
         <div>
-          <h4 class="mt-5">📊 Attack Type Distribution</h4>
+          <h4 class="mb-5">Attack Type Distribution</h4>
           <canvas id="attackPieChart" width="400px" height="400px" class="mb-5"></canvas>
         </div>
         <div>
-          <h4 class="mt-5">⏱️ Attack Durations by Sequence</h4>
+          <h4 class="">Attack Durations by Sequence</h4>
           <canvas id="durationChart" width="700px"></canvas>
         </div>
       </div>
 
-      <h3 class="mb-3">📄 Attack Information</h3>
+      <h3 class="mb-3">Attack Information</h3>
       <div class="table-responsive">
         <table class="table table-striped table-bordered align-middle">
           <thead class="table-dark">
@@ -148,7 +156,7 @@
       </nav>
 
 
-      <h4>🔮 Next Predicted Behavior: {{ next_label }}</h4>
+      <h4>Next Predicted Behavior: {{ next_label }}</h4>
 
       <ul>
         {% for label, prob in label_probs %}
@@ -156,8 +164,8 @@
         {% endfor %}
       </ul>
 
-      <h5 class="mt-3">🕒 Estimated Time Until Next Attack</h5>
-      <p class="text-muted">{{ survival_time }}</p>
+      <!-- <h5 class="mt-3">🕒 Estimated Time Until Next Attack</h5>
+      <p class="text-muted">{{ survival_time }}</p> -->
       
       <canvas id="nextAttackChart" width="400px" height="300px"></canvas>
 
@@ -165,12 +173,6 @@
         <a class="btn btn-outline-primary" href="/download">⬇️ Download CSV</a>
       </div>
 
-      <div class="toggle-button" onclick="toggleBehavior()">Show Behavior Prediction</div>
-      <div id="behavior-section" style="display:none;">
-        <div class="info-box">
-          <p>Next Predicted Behavior: <span class="highlight">{{ next_label }}</span></p>
-        </div>
-      </div>
     </div>
   </div>
   <script>

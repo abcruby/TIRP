@@ -1,121 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>📊 Admin Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <title>MalDetect • Admin Dashboard</title>
+
+  <!-- Bootstrap 5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+  />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <style>
-     body {
-      display: flex;
+    /* sidebar scroll */
+    #sidebarMenu {
+      height: 100vh;
+      overflow-y: auto;
     }
-    .sidebar {
-      width: 250px;
-      min-height: 100vh;
-    }
-    .content {
-      flex-grow: 1;
-      padding: 20px;
-    }
-    .dashboard-box {
+    /* summary tiles */
+    .dash-box {
       padding: 1.5rem;
-      border-radius: 0.5rem;
-      color: white;
+      border-radius: .6rem;
+      color: #fff;
+      box-shadow: 0 4px 6px rgba(0,0,0,.1);
+      text-align: center;
       margin-bottom: 1rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .dashboard-title {
-      font-size: 1.2rem;
-      margin-bottom: 0.3rem;
-    }
-    .dashboard-value {
-      font-size: 2rem;
-      font-weight: bold;
-    }
+    .dash-title { font-size: 1.1rem; margin-bottom: .2rem; }
+    .dash-val   { font-size: 2rem; font-weight: 700; }
   </style>
 </head>
-<body>
-    <!-- Sidebar -->
-    <div class="sidebar bg-dark text-white">
-      <h4 class="p-3">MalDetect Admin</h4>
-      <div class="list-group list-group-flush">
-        <a href="/admin" class="list-group-item list-group-item-action bg-dark text-white">Dashboard</a>
-        <a href="/" class="list-group-item list-group-item-action bg-dark text-white">Detect</a>
-        <a href="/history" class="list-group-item list-group-item-action bg-dark text-white">History</a>
-        <a href="{{ url_for('admin.manage_users') }}" class="list-group-item list-group-item-action bg-dark text-white">User Management</a>
-        <a href="/profile" class="list-group-item list-group-item-action bg-dark text-white">Profile</a>
-        <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action bg-dark text-white">Logout</a>
-      </div>
-    </div>
-<div class="content my-5">
-  <h2 class="mb-4">📊 Admin Dashboard</h2>
 
-  <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="dashboard-box bg-primary text-center">
-        <div class="dashboard-title">Total Users</div>
-        <div class="dashboard-value">{{ total_users }}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="dashboard-box bg-success text-center">
-        <div class="dashboard-title">Active Users</div>
-        <div class="dashboard-value">{{ active_users }}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="dashboard-box bg-warning text-dark text-center">
-        <div class="dashboard-title">New Users (7 days)</div>
-        <div class="dashboard-value">{{ new_users }}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="dashboard-box bg-secondary text-center">
-        <div class="dashboard-title">Tests Run</div>
-        <div class="dashboard-value">{{ test_runs }}</div>
-      </div>
-    </div>
-    <div class="col-md-3 mt-3">
-      <div class="dashboard-box bg-danger text-center">
-        <div class="dashboard-title">Malware Detected</div>
-        <div class="dashboard-value">{{ malware_detected }}</div>
-      </div>
+<body class="bg-light">
+  <!-- Brand bar -->
+  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="/">MalDetect Admin</a>
+
+    <!-- burger on < md -->
+    <button
+      class="navbar-toggler position-absolute d-md-none collapsed"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#sidebarMenu"
+      aria-controls="sidebarMenu"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+  </header>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <nav id="sidebarMenu"
+           class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+        <div class="position-sticky pt-3">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link active text-white" href="/admin"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/"><i class="bi bi-shield-check me-1"></i> Detect</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('admin.upload_dataset') }}"><i class="bi bi-cloud-arrow-up me-1"></i> Train data model</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/history"><i class="bi bi-clock-history me-1"></i> History</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('admin.manage_users') }}"><i class="bi bi-people me-1"></i> User Management</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/profile"><i class="bi bi-person-circle me-1"></i> Profile</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-1"></i> Logout</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <!-- Main -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 overflow-y-visible">
+        <h2 class="mb-4"><i class="bi bi-bar-chart-line me-2"></i> Admin Dashboard</h2>
+        <hr>
+
+        <!-- KPI tiles -->
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6 col-lg-3">
+            <div class="dash-box bg-primary">
+              <div class="dash-title">Total Users</div>
+              <div class="dash-val">{{ total_users }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="dash-box bg-success">
+              <div class="dash-title">Active Users</div>
+              <div class="dash-val">{{ active_users }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="dash-box bg-warning text-dark">
+              <div class="dash-title">New Users (7 days)</div>
+              <div class="dash-val">{{ new_users }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="dash-box bg-secondary">
+              <div class="dash-title">Tests Run</div>
+              <div class="dash-val">{{ test_runs }}</div>
+            </div>
+          </div>
+          <div class="col-sm-12 col-lg-3">
+            <div class="dash-box bg-danger">
+              <div class="dash-title">Malware Detected</div>
+              <div class="dash-val">{{ malware_detected }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model metrics -->
+        <h4 class="mb-3"><i class="bi bi-graph-up me-1"></i> Model Insights</h4>
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6 col-lg-3">
+            <div class="dash-box bg-info">
+              <div class="dash-title">Accuracy</div>
+              <div class="dash-val">{{ model_accuracy | round(3) }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="dash-box bg-info">
+              <div class="dash-title">Precision</div>
+              <div class="dash-val">{{ precision | round(3) }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="dash-box bg-info">
+              <div class="dash-title">Recall</div>
+              <div class="dash-val">{{ recall | round(3) }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="dash-box bg-info">
+              <div class="dash-title">F1 Score</div>
+              <div class="dash-val">{{ f1_score | round(3) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <canvas id="accuracyChart" height="80"></canvas>
+          </div>
+        </div>
+      </main>
     </div>
   </div>
 
+  <!-- JS: Bootstrap + Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
- 
-</div>
-</body>
-</html><div class="mt-5">
-  <h5>🎯 Top Feature Importance (Random Forest)</h5>
-  <canvas id="featureImportanceChart" width="400" height="200"></canvas>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  const ctx = document.getElementById('featureImportanceChart').getContext('2d');
-  const featureChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: {{ feature_names | tojson }},
-      datasets: [{
-        label: 'Feature Importance',
-        data: {{ importances | tojson }},
-        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false }
+  <script>
+    const ctx = document.getElementById('accuracyChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ dataset_labels | tojson }},
+        datasets: [{
+          label: 'Model Accuracy',
+          data: {{ accuracy_values | tojson }},
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.1)',
+          tension: .3,
+          pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointHoverBackgroundColor: 'rgba(54, 162, 235, 1)',
+          pointHoverBorderColor: '#fff',
+          fill: true
+        }]
       },
-      scales: {
-        y: { beginAtZero: true }
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' },
+          title: {
+            display: true,
+            text: '📈 Accuracy per Dataset'
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 1,
+            title: { display: true, text: 'Accuracy (0 – 1)' }
+          },
+          x: {
+            title: { display: true, text: 'Dataset' }
+          }
+        }
       }
-    }
-  });
-</script>
-
+    });
+  </script>
+</body>
+</html>
