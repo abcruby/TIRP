@@ -2,7 +2,17 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
 db = SQLAlchemy()
-
+class ModelTrainingLog(db.Model):
+    __tablename__ = 'model_training_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)
+    accuracy = db.Column(db.Float)
+    precision = db.Column(db.Float)
+    recall = db.Column(db.Float)
+    f1_score = db.Column(db.Float)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    def __repr__(self):
+        return f"<TrainingLog {self.dataset_name}>"
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
